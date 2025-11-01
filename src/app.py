@@ -16,7 +16,9 @@ def transcribe():
     if 'audio' not in request.files:
         return jsonify({ 'error': 'No audio file received' }), 400
     audio_file = request.files['audio']
-    
+
+
+    # temp store  audio file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp:
         audio_file.save(temp.name)
         temp.flush()
@@ -26,6 +28,7 @@ def transcribe():
 
         os.unlink(temp.name)
 
+    # temp store transcript text
     txt_path = tempfile.NamedTemporaryFile(delete=False, suffix=".txt").name
     with open(txt_path, 'w', encoding='utf-8') as f:
         f.write(str(text))

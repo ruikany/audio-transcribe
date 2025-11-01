@@ -1,0 +1,42 @@
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, sans-serif;
+  background-color: gray;
+  color: #333;
+  font-size: 16px;
+}
+
+.recBtn,
+.dlBtn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 1em;
+  padding: 1em 2em;
+  margin: 1em;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.recBtn:hover,
+.dlBtn:hover {
+  background-color: #0056b3;
+}
+
+.transcript {
+  max-width: 600px;
+  text-align: left;
+  font-size: 18px;
+  margin-top: 20px;
+  padding: 10px 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}

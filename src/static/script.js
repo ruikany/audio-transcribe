@@ -1,66 +1,75 @@
-let mediaRecorder;
-let chunks = [];
-let rec = false;
-let audioStream;
+let chunks = []; // to store recorded audio data
+let rec = false; // is currently recording?
+let audioStream; // MediaStream stream that captures mic input
+let mediaRecorder; // obj that encodes audioStream into media format
 
 const recBtn = document.querySelector(".recBtn");
 const transcript = document.querySelector(".transcript");
 const dlBtn = document.querySelector(".dlBtn");
 
-recBtn.onclick = async () => {
-  if (!rec) {
-    try {
-      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(audioStream, {
-        mimeType: "audio/webm;codecs=opus",
-      });
-      chunks = [];
+recBtn.onclick = () => (rec ? stopRecording() : startRecording());
 
-      // set up event handlers here — after recorder is created
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        console.log("Recorded blob size:", blob.size);
-        const formData = new FormData();
-        formData.append("audio", blob, "recording.webm");
-
-        try {
-          const res = await fetch("/transcribe", {
-            method: "POST",
-            body: formData,
-          });
-
-          const data = await res.json();
-          if (data.text) {
-            transcript.textContent = data.text;
-            dlBtn.style.display = "inline-block";
-            dlBtn.onclick = () => {
-              window.location.href = data.file_url;
-            };
-          } else {
-            transcript.textContent = "transcription failed";
-          }
-        } catch (e) {
-          console.error("upload audio failed", e);
-          transcript.textContent = "processing audio failed";
-        }
-      };
-
-      mediaRecorder.start();
-      rec = true;
-      recBtn.textContent = "Stop recording";
-    } catch (e) {
-      console.error("microphone access failed", e);
-    }
-  } else {
-    rec = false;
+function stopRecording() {
+  if (mediaRecorder && rec) {
     mediaRecorder.stop();
-    recBtn.textContent = "Start recording";
-
-    // stop all audio tracks
     audioStream.getTracks().forEach((track) => track.stop());
+    rec = false;
+    recBtn.textContent = "Start Recording";
   }
-};
+}
+
+async function startRecording() {
+  try {
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(audioStream, {
+      mimeType: "audio/webm;codecs=opus",
+    });
+    chunks = [];
+
+    // callbacks
+    mediaRecorder.ondataavailable = handleData;
+    mediaRecorder.onstop = handleStop;
+
+    mediaRecorder.start();
+    rec = true;
+    recBtn.textContent = "Stop Recording";
+  } catch (e) {
+    console.error("error accessing microphone: ", e);
+  }
+}
+
+function handleData(e) {
+  if (e.data.size > 0) chunks.push(e.data);
+}
+
+async function handleStop() {
+  const blob = new Blob(chunks, { type: "audio/webm" });
+  console.log(blob.size);
+
+  transcript.textContent = "Processing transcription...";
+  try {
+    const data = await uploadAudio(blob);
+    console.log(data);
+    if (data.text) {
+      transcript.textContent = data.text;
+      dlBtn.style.display = "inline-block";
+      dlBtn.onclick = () => {
+        window.location.href = data.file_url;
+      };
+    } else {
+      transcript.textContent = "No voice detected, please try again";
+    }
+  } catch (e) {
+    console.error("transcription failed: ", e);
+    transcript.textContent = "transcription failed";
+  }
+}
+
+async function uploadAudio(blob) {
+  const formData = new FormData();
+  formData.append("audio", blob, "recording.webm");
+
+  const res = await fetch("/transcribe", { method: "POST", body: formData });
+  if (!res.ok) throw new Error("UploadAudio failed");
+  return await res.json();
+}
