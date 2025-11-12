@@ -1,11 +1,11 @@
-let chunks = []; // to store recorded audio data
-let rec = false; // is currently recording?
-let audioStream; // MediaStream stream that captures mic input
-let mediaRecorder; // obj that encodes audioStream into media format
-
 const recBtn = document.querySelector(".recBtn");
 const transcript = document.querySelector(".transcript");
 const dlBtn = document.querySelector(".dlBtn");
+
+let rec = false; // is currently recording?
+let chunks = []; // to store recorded audio data
+let audioStream; // MediaStream stream that captures mic input
+let mediaRecorder; // obj that encodes audioStream into media format
 
 recBtn.onclick = () => (rec ? stopRecording() : startRecording());
 
