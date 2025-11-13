@@ -39,7 +39,6 @@
 
       // --- WebSocket Handling ---
       function connectWebSocket() {
-        // Use wss:// for secure connections (HTTPS)
         const wsUrl = `ws://${window.location.host}/mic`;
         ws = new WebSocket(wsUrl);
 
@@ -50,7 +49,17 @@
 
         ws.onmessage = (event) => {
           // Server sent us a new transcription
-          transcriptEl.textContent += event.data + "\n";
+          const message = event.data;
+          console.log("Received message:", message); // DEBUG
+
+          if (message.startsWith("FINAL:")) {
+            const newText = message.substring(6); // Get text after "FINAL: "
+            transcriptEl.textContent = newText; // Replace whole content
+            statusEl.textContent = "Status: Connected. Ready to record.";
+          } else if (message.startsWith("INTERIM:")) {
+            const interimText = message.substring(8); // Get text after "INTERIM: "
+            statusEl.textContent = "Processing: " + interimText;
+          }
         };
 
         ws.onclose = () => {
@@ -74,47 +83,49 @@
           mediaStream = await navigator.mediaDevices.getUserMedia({
             audio: true,
           });
-
-          // 1. THIS IS THE CHANGE:
-          // Let the AudioContext use the hardware's native sample rate.
-          // This will make the connection succeed.
           audioContext = new (window.AudioContext ||
             window.webkitAudioContext)();
-
-          // Now this connection will work, as both are at the same rate
           const source = audioContext.createMediaStreamSource(mediaStream);
+          audioProcessor = audioContext.createScriptProcessor(1024, 1, 1);
 
-          audioProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-
-          // Store the native sample rate for our resampler
           const nativeSampleRate = audioContext.sampleRate;
 
           audioProcessor.onaudioprocess = (e) => {
             if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-            // Get the raw audio (at native sample rate, e.g., 48000 Hz)
+            // Get raw input data
             const float32Data = e.inputBuffer.getChannelData(0);
 
-            // 2. THIS IS THE NEW PART:
-            // Resample the audio from native-rate down to 16000 Hz
+            // Resample
             const resampledData = resample(
               float32Data,
               nativeSampleRate,
               16000,
             );
 
-            // Convert to 16-bit PCM (Int16)
+            // Convert the *RESAMPLED DATA* to 16-bit PCM (Int16)
             const pcmData = new Int16Array(resampledData.length);
             for (let i = 0; i < resampledData.length; i++) {
-              let s = Math.max(-1, Math.min(1, resampledData[i]));
+              let s = Math.max(-1, Math.min(1, resampledData[i])); // Use resampledData
               pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
             }
 
-            // Send the 16000 Hz data
+            // --- ⬇️ DEBUG CODE (MOVED TO CORRECT LOCATION) ⬇️ ---
+            let maxVolume = 0;
+            for (let i = 0; i < float32Data.length; i++) {
+              // Check original data for volume
+              maxVolume = Math.max(maxVolume, Math.abs(float32Data[i]));
+            }
+            console.log(
+              `Sending ${pcmData.buffer.byteLength} bytes... Input Max Volume: ${maxVolume.toFixed(4)}`,
+            );
+            // --- ⬆️ END OF DEBUG CODE ⬆️ ---
+
             ws.send(pcmData.buffer);
           };
+
           source.connect(audioProcessor);
-          audioProcessor.connect(audioContext.destination); // Connect to output (necessary)
+          audioProcessor.connect(audioContext.destination);
         } catch (e) {
           console.error("Error starting audio:", e);
           statusEl.textContent = "Error: Could not access microphone.";
@@ -140,22 +151,20 @@
           mediaStream.getTracks().forEach((track) => track.stop());
           mediaStream = null;
         }
-        // Note: We don't close the WebSocket here, as the server
-        // might still be processing the last bit of audio.
       }
 
       // --- Init ---
       recBtn.onclick = () => {
         recording ? stopRecording() : startRecording();
       };
-
       recBtn.disabled = true;
       connectWebSocket();
+
+      // --- Resample Helper Function ---
       function resample(buffer, fromSampleRate, toSampleRate) {
         if (fromSampleRate === toSampleRate) {
           return buffer;
         }
-
         const ratio = fromSampleRate / toSampleRate;
         const newLength = Math.floor(buffer.length / ratio);
         const result = new Float32Array(newLength);
@@ -169,10 +178,8 @@
           const p1 = buffer[index + 1];
 
           if (p1 === undefined) {
-            // Handle end of buffer
             result[i] = p0;
           } else {
-            // Simple linear interpolation
             result[i] = p0 + (p1 - p0) * fraction;
           }
         }

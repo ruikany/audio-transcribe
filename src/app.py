@@ -1,59 +1,96 @@
 from flask import Flask, render_template
 from flask_sock import Sock
 from RealtimeSTT import AudioToTextRecorder
+import logging
 
 app = Flask(__name__)
 sock = Sock(app)
 
-# This callback function will be passed to the recorder
-def send_transcription_to_client(text, websocket):
-    """Callback to send transcription text over the WebSocket."""
-    print(f"Sending to client: {text}")
+# --- NEW VAD Callbacks ---
+def vad_start():
+    print(">>> VAD START <<< (Speech detected)")
+
+def vad_stop():
+    print("<<< VAD STOP >>> (Silence detected)")
+
+# --- Transcription Callbacks (no change) ---
+def send_stabilized_text(text, websocket):
+    print(f"✅ STABILIZED: {text}")
     try:
-        # This will send the cumulative transcription
-        websocket.send(text) 
+        websocket.send(f"FINAL: {text}")
     except Exception as e:
-        print(f"Error sending to websocket: {e}")
+        print(f"Error sending stabilized text: {e}")
+
+def send_interim_text(text, websocket):
+    print(f"🔄 INTERIM: {text}")
+    try:
+        websocket.send(f"INTERIM: {text}")
+    except Exception as e:
+        print(f"Error sending interim text: {e}")
 
 @app.route('/')
 def index():
-    """Serves the main HTML page."""
     return render_template('index2.html')
 
 @sock.route('/mic')
 def mic(ws):
-    """Handles the WebSocket connection for a single client."""
     print("WebSocket connection established.")
     
-    # 1. Create a callback that includes the websocket
-    #    We need a wrapper function to pass the 'ws' object.
-    def on_stabilized_text(text):
-        send_transcription_to_client(text, ws)
+    # --- Callbacks (no change) ---
+    def vad_start():
+        print(">>> VAD START <<< (Speech detected)")
 
-    # 2. Correctly initialize the recorder
+    def vad_stop():
+        print("<<< VAD STOP >>> (Silence detected)")
+
+    def send_stabilized_text(text, websocket):
+        print(f"✅ STABILIZED: {text}")
+        try:
+            websocket.send(f"FINAL: {text}")
+        except Exception as e:
+            print(f"Error sending stabilized text: {e}")
+
+    def send_interim_text(text, websocket):
+        print(f"🔄 INTERIM: {text}")
+        try:
+            websocket.send(f"INTERIM: {text}")
+        except Exception as e:
+            print(f"Error sending interim text: {e}")
+
+    def on_stabilized(text):
+        send_stabilized_text(text, ws)
+        
+    def on_interim(text):
+        send_interim_text(text, ws)
+
+    # --- Initialize the recorder WITH VAD FILTER DISABLED ---
     recorder = AudioToTextRecorder(
-        # CRITICAL: Tell the recorder to accept audio from feed_audio()
         use_microphone=False, 
-        
-        # CRITICAL: Enable real-time mode to get access to the callbacks
         enable_realtime_transcription=True,
+        on_realtime_transcription_stabilized=on_stabilized, 
+        on_realtime_transcription_update=on_interim, 
+        realtime_model_type="tiny.en",
         
-        # CRITICAL: This is the correct callback for "end-of-sentence"
-        on_realtime_transcription_stabilized=on_stabilized_text,
+        on_vad_start=vad_start,
+        on_vad_stop=vad_stop,
         
-        # Optional: Use a smaller, faster model for real-time
-        realtime_model_type="tiny.en", 
+        webrtc_sensitivity=0, # Most sensitive
+        silero_sensitivity=1.0, # Most sensitive
         
-        # Optional: Set language if you know it
-        language="en"
+        # ----------------------------------------------------
+        # ⬇️ THIS IS THE NEW LINE ⬇️
+        # Disable the extra VAD filter from faster_whisper
+        faster_whisper_vad_filter=False,
+        # ----------------------------------------------------
+        
+        level=logging.DEBUG 
     )
 
     try:
         while True:
-            # Receive raw audio data (bytes) from the client
             data = ws.receive()
             if data:
-                # 3. Feed the audio from the browser into the recorder
+                print(f"Received {len(data)} bytes...") # Shortened this log
                 recorder.feed_audio(data)
                 
     except Exception as e:

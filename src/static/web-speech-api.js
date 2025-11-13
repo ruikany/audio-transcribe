@@ -32,7 +32,7 @@ if (window.SpeechRecognition) {
     })
       .then((result) => {
         if (result === "available") {
-          recognition.processLocally = true;
+          //recognition.processLocally = true;
           recognition.start();
           rec = true;
           recBtn.textContent = "Stop Recording";

@@ -1,15 +1,15 @@
-# from flask import Flask, render_template, request, send_file, jsonify
-# import whisper
-# import os
-# import tempfile
+from flask import Flask, render_template, request, send_file, jsonify
+#import whisper
+#import os
+#import tempfile
 #
-# app = Flask(__name__)
+app = Flask(__name__)
 #
 # #model = whisper.load_model("base")
 #
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # @app.route('/transcribe', methods=['POST'])
 # def transcribe():
