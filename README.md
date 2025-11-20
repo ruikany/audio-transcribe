@@ -16,7 +16,7 @@ The server expects binary messages. Do not send text/JSON directly. Each message
 
 ```
 // to define ws socket, replace with actual microservice server ip
-let socket = new WebSocket("ws://<SERVER_IP>:8000/ws/transcribe");
+let socket = new WebSocket("wss://<SERVER_IP>:8000/ws/transcribe");
 
 function sendAudioChunk(socket, audioContext, rawInputData) { if (socket.readyState !== WebSocket.OPEN) return;
 
