@@ -13,10 +13,13 @@ print("Model Loaded.")
 async def transcribe(file: UploadFile = File(...)):
     # Read raw PCM bytes (we assume Gateway sent 16k s16le PCM)
     audio_bytes = await file.read()
-    
+    if len(audio_bytes) == 0:
+        return {"text": ""}    
     # Convert bytes to float32 array (required by faster-whisper)
     audio_np = np.frombuffer(audio_bytes, dtype=np.int16).flatten().astype(np.float32) / 32768.0
-    
+   
+    if audio_np.size == 0:
+        return {"text": ""}
     # Run Inference
     segments, info = model.transcribe(audio_np, beam_size=5)
     

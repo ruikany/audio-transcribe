@@ -2,6 +2,9 @@ FROM python:3.12.3-slim
 
 # 'build-essential' and 'python3-dev' are required to compile C extensions
 # 'portaudio19-dev' is required for the microphone/audio interface
+#
+ENV PYTHONUNBUFFERED=1
+
 RUN apt-get update && apt-get install -y \
     build-essential \
     python3-dev \

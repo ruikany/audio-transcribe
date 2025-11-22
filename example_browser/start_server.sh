@@ -11,11 +11,11 @@ cleanup() {
 trap cleanup SIGINT
 
 echo "Starting HTTP server on http://localhost:8000"
-python -m http.server 8000 &
+python3 -m http.server 8000 &
 HTTP_PID=$!
 
 echo "Starting WebSocket server on ws://localhost:8001"
-python server.py &
+python3 server.py &
 WS_PID=$!
 
 wait $WS_PID

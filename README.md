@@ -63,5 +63,7 @@ When to use: Replace the "Realtime" draft with this text (e.g., in white/black t
 }
 
 1.need to test latency, test with more worker replicas
-2.need to change ws url to actual jetson machine
-3.need to change allowed cors origin if new frontend
+
+1. install nvidia-container-toolkit on whatever machine hosts the application
+   2.need to change ws url to actual jetson machine
+   3.need to change allowed cors origin if new frontend
