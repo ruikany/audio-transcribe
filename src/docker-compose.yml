@@ -1,21 +1,13 @@
 services:
-  gateway:
-    build: ./gateway
+  stt-service:
+    build: .
     ports:
       - "8000:8000"
     deploy:
-      replicas: 1
-    environment:
-      # We point directly to the 'worker' service name
-      - WORKER_URL=http://worker:8000
-
-  worker:
-    build: ./worker
-    deploy:
-      replicas: 2 # increase number of replicas as needed, limit is device VRAM
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+    restart: unless-stopped
