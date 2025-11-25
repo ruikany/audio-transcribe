@@ -16,6 +16,7 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
+RUN python3 -c "import torch; torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', force_reload=True)"
 # Copy the single server file
 COPY server.py .
 
