@@ -14,3 +14,8 @@ services:
               count: all
               capabilities: [gpu]
     restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel run --token eyJhIjoiZGUwMDgxMTFmYWIyMmRlNzE5ZTFjNWQwZmM0NWI5ZmIiLCJ0IjoiNjViNWQ4ZTYtNjIzZi00N2Q0LWJmODYtZGYwYjAwZmNjZWI4IiwicyI6Ik9UWXpNamM0TW1JdE1EWmtZUzAwT0dZekxUZ3hOemN0T0dNeU1qRmpNekkxTURoaCJ9
